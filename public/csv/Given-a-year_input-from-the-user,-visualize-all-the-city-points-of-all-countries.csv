@@ -1,0 +1,2 @@
+﻿COUNTRY,CITY,YEAR,PM25,latitude,longitude,POPULATION,WBINC16,REGION,CONC_PM25,COLOR_PM25,GEOM
+Senegal,Dakar,2015,35.5,14.726953,-17.45776,3520215,Low income,Africa (Sub-Saharan) (LMIC),35-<50,red,"{""srid"":4326,""version"":1,""points"":[{""x"":-17.4578,""y"":14.727,""z"":null,""m"":null}],""figures"":[{""attribute"":1,""pointOffset"":0}],""shapes"":[{""parentOffset"":-1,""figureOffset"":0,""type"":1}],""segments"":[]}"

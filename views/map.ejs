@@ -1,0 +1,107 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>ArcGIS API for JavaScript Tutorials: Display a map</title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+
+        width: 100%;
+      }
+      #srDiv {
+        height: 40px;
+        padding: 10px;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.23/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.23/"></script>
+
+    <script type="text/javascript">
+      require([
+        "esri/config",
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/layers/CSVLayer",
+        "esri/Graphic",
+        "esri/layers/GraphicsLayer",
+        "esri/widgets/Legend",
+      ], function (
+        esriConfig,
+        Map,
+        MapView,
+        FeatureLayer,
+        CSVLayer,
+        Graphic,
+        GraphicsLayer,
+        Legend
+      ) {
+        esriConfig.apiKey =
+          "AAPKe266bf661a24423f96d6486821a90e1eXEx2Qx5PCP6tOsy9lLliSvE1SyAFdXzgmrqOWPMei2qtfmMQMLrjazswJ4ozViKU";
+
+        const map = new Map({
+          basemap: "arcgis-dark-gray", // Basemap layer service
+        });
+
+        const view = new MapView({
+          map: map,
+          center: [100.992538, 15.870032], // Longitude, latitude
+          zoom: 5, // Zoom level
+          container: "viewDiv", // Div element
+        });
+
+        const csvLayer = new CSVLayer({
+          url: "/csv/" + "<%= mapCsv %>",
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-marker",
+              style: "circle",
+              color: [0, 255, 255],
+              outline: {
+                color: [255, 255, 255, 0.5],
+                width: 0.5,
+              },
+              size: "8px",
+            },
+          },
+          popupTemplate: {
+            title: "City : {CITY}",
+            content: `<b>Country:</b> {COUNTRY}<br>
+                <b>City:</b> {CITY}<br>
+                <b>Year:</b> {YEAR}<br>
+                <b>PM25:</b> {PM25}<br>
+                <b>Population:</b> {POPULATION}<br>
+                <b>WBINC16:</b> {WBINC16}<br>
+                <b>Region:</b> {REGION}<br>
+                <b>CONC_PM25:</b> {CONC_PM25}<br>
+                <b>COLOR_PM25:</b> {COLOR_PM25}<br>
+                `,
+          },
+        });
+        map.add(csvLayer);
+        view.ui.add("srDiv", "top-right");
+        view.watch("spatialReference", () => {
+          document.getElementById("srDiv").innerHTML = `<%= whatQuery %>`;
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+    <div id="srDiv" class="esri-widget"></div>
+  </body>
+</html>
