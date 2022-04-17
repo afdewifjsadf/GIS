@@ -39,6 +39,7 @@
         "esri/Graphic",
         "esri/layers/GraphicsLayer",
         "esri/widgets/Legend",
+        "esri/Color",
       ], function (
         esriConfig,
         Map,
@@ -63,33 +64,104 @@
           container: "viewDiv", // Div element
         });
 
+        var renderer = {
+          type: "unique-value",
+          field: "CONC_PM25",
+          defaultSymbol: {
+            type: "simple-marker",
+            style: "circle",
+          },
+          uniqueValueInfos: [
+            {
+              value: ">50",
+              symbol: {
+                type: "simple-marker",
+                color: "darkred",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+            {
+              value: "35-<50",
+              symbol: {
+                type: "simple-marker",
+                color: "red",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+            {
+              value: "25-<35",
+              symbol: {
+                type: "simple-marker",
+                color: "darkorange",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+            {
+              value: "15-<25",
+              symbol: {
+                type: "simple-marker",
+                color: "orange",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+            {
+              value: "10-<15",
+              symbol: {
+                type: "simple-marker",
+                color: "yellow",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+            {
+              value: "<10",
+              symbol: {
+                type: "simple-marker",
+                color: "green",
+                size: "8px",
+                outline: {
+                  color: [255, 255, 255, 0.5],
+                  width: 0.5,
+                },
+              },
+            },
+          ],
+        };
+
         const csvLayer = new CSVLayer({
           url: "/csv/" + "<%= mapCsv %>",
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-marker",
-              style: "circle",
-              color: [0, 255, 255],
-              outline: {
-                color: [255, 255, 255, 0.5],
-                width: 0.5,
-              },
-              size: "8px",
-            },
-          },
+          renderer: renderer,
           popupTemplate: {
             title: "City : {CITY}",
             content: `<b>Country:</b> {COUNTRY}<br>
-                <b>City:</b> {CITY}<br>
-                <b>Year:</b> {YEAR}<br>
-                <b>PM25:</b> {PM25}<br>
-                <b>Population:</b> {POPULATION}<br>
-                <b>WBINC16:</b> {WBINC16}<br>
-                <b>Region:</b> {REGION}<br>
-                <b>CONC_PM25:</b> {CONC_PM25}<br>
-                <b>COLOR_PM25:</b> {COLOR_PM25}<br>
-                `,
+                  <b>City:</b> {CITY}<br>
+                  <b>Year:</b> {YEAR}<br>
+                  <b>PM25:</b> {PM25}<br>
+                  <b>Population:</b> {POPULATION}<br>
+                  <b>WBINC16:</b> {WBINC16}<br>
+                  <b>Region:</b> {REGION}<br>
+                  <b>CONC_PM25:</b> {CONC_PM25}<br>
+                  <b>COLOR_PM25:</b> {COLOR_PM25}<br>
+                  `,
           },
         });
         map.add(csvLayer);
@@ -97,6 +169,18 @@
         view.watch("spatialReference", () => {
           document.getElementById("srDiv").innerHTML = `<%= whatQuery %>`;
         });
+
+        const legend = new Legend({
+          view: view,
+          layerInfos: [
+            {
+              layer: csvLayer,
+              title: "Color PM25",
+            },
+          ],
+        });
+
+        view.ui.add(legend, "bottom-right");
       });
     </script>
   </head>

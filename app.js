@@ -423,7 +423,10 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
         } else if (id == 3) {
             let pool = await sql.connect(config);
-            const result = await pool.request().query(
+            const year_input = req.body.year_input
+            const result = await pool.request()
+                .input('year', sql.Int, year_input)
+                .query(
                 `DECLARE @Thailand GEOMETRY;
                 SELECT @Thailand = Geom
                 FROM world
@@ -431,13 +434,13 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
                 SELECT *
                 FROM [${process.env.DBTABLE}]
-                WHERE YEAR = 2014 AND COUNTRY in (SELECT NAME
+                WHERE year = @year AND COUNTRY in (SELECT NAME
                                                 FROM world
                                                 WHERE Geom.MakeValid().STTouches(@Thailand.MakeValid()) = 1)`
-            )
+                )
 
             const workbook = new excelJS.Workbook();
-            const worksheet = workbook.addWorksheet(`50 closest Bangkok`);
+            const worksheet = workbook.addWorksheet(`Thailand’s neighboring countries ${year_input}`);
 
             worksheet.columns = [
                 { header: "COUNTRY", key: "COUNTRY", width: 20 },
@@ -460,8 +463,8 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 cell.font = { bold: true };
             });
 
-            const fileNameXlsx = `Visualize-all-the-city-points-of-Thailand’s-neighboring-countries-in-2018.xlsx`
-            const fileNameCsv = `Visualize-all-the-city-points-of-Thailand’s-neighboring-countries-in-2018.csv`
+            const fileNameXlsx = `Visualize-all-the-city-points-of-Thailand’s-neighboring-countries-in-${year_input}.xlsx`
+            const fileNameCsv = `Visualize-all-the-city-points-of-Thailand’s-neighboring-countries-in-${year_input}.csv`
             const filePathXlsx = path.join(__dirname, `public/excel/visualize/${fileNameXlsx}`)
             const filePathCsv = path.join(__dirname, `public/csv/${fileNameCsv}`)
 
@@ -470,7 +473,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
-                    res.status(200).render("map", { "mapCsv": fileNameCsv, "whatQuery": `Visualize all the city points of Thailand’s neighboring countries in 2018.` })
+                    res.status(200).render("map", { "mapCsv": fileNameCsv, "whatQuery": `Visualize all the city points of Thailand’s neighboring countries in ${year_input}` })
                 }
             });
 
@@ -479,20 +482,19 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             let pool = await sql.connect(config);
             const country = 'Thailand';
-            const year = 2014
+            const year_input = req.body.year_input
             const result_MBR = await pool.request()
                 .input('country', sql.NVarChar(255), country)
-                .input('year', sql.Int, year)
+                .input('year', sql.Int, year_input)
                 .query(
-                    `DECLARE @TH geometry
+                `DECLARE @TH geometry
                 SELECT @TH = geometry::UnionAggregate(GEOM)
                 FROM [${process.env.DBTABLE}]
                 WHERE COUNTRY = @country AND YEAR = @year;
 
                 SELECT @TH.STEnvelope().ToString()  as envelope;
+                `)
 
-                `
-                )
             const tem = result_MBR.recordset[0]['envelope'].replace("POLYGON ((", "").replace("))", "").split(", ")
 
             const fourPointsoFMBR = {
@@ -504,10 +506,10 @@ app.post('/visualizeMap/:id', async (req, res) => {
             console.log(fourPointsoFMBR)
             const result = await pool.request()
                 .input('country', sql.NVarChar(255), country)
-                .input('year', sql.Int, year)
+                .input('year', sql.Int, year_input)
                 .query(`SELECT * FROM [${process.env.DBTABLE}] WHERE COUNTRY =  @country AND YEAR = @year;`)
             const workbook = new excelJS.Workbook();
-            const worksheet = workbook.addWorksheet(`highest no of city in 2011`);
+            const worksheet = workbook.addWorksheet(`highest no of city in ${year_input}`);
             worksheet.columns = [
                 { header: "COUNTRY", key: "COUNTRY", width: 20 },
                 { header: "CITY", key: "CITY", width: 20 },
@@ -529,8 +531,8 @@ app.post('/visualizeMap/:id', async (req, res) => {
             worksheet.getRow(1).eachCell((cell) => {
                 cell.font = { bold: true };
             });
-            const fileNameXlsx = `Visualize-the-four-points-of-MBR-covering-all-city-points-in-Thailand-in-2009.xlsx`
-            const fileNameCsv = `Visualize-the-four-points-of-MBR-covering-all-city-points-in-Thailand-in-2009.csv`
+            const fileNameXlsx = `Visualize-the-four-points-of-MBR-covering-all-city-points-in-Thailand-in-${year_input}.xlsx`
+            const fileNameCsv = `Visualize-the-four-points-of-MBR-covering-all-city-points-in-Thailand-in-${year_input}.csv`
             const filePathXlsx = path.join(__dirname, `public/excel/visualize/${fileNameXlsx}`)
             const filePathCsv = path.join(__dirname, `public/csv/${fileNameCsv}`)
 
@@ -538,8 +540,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
             const workBookXlsx = XLSX.readFile(filePathXlsx);
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
 
-            res.render("map_2", { "mapCsv": fileNameCsv, fourPointsoFMBR, "whatQuery": `Visualize the four points of MBR covering all city points in Thailand in 2009.` })
-
+            res.render("map_2", { "mapCsv": fileNameCsv, fourPointsoFMBR, "whatQuery": `Visualize the four points of MBR covering all city points in Thailand in ${year_input}.` })
 
 
         } else if (id == 5) {
@@ -643,8 +644,8 @@ app.post('/visualizeMap/:id', async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error)
-        res.json({ "success": false, "message": error })
+        console.log(error.message)
+        res.json({ "success": false, "message": error.message })
     }
 
 })

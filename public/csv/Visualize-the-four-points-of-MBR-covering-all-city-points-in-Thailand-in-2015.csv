@@ -1,0 +1,2 @@
+﻿COUNTRY,CITY,YEAR,PM25,latitude,longitude,POPULATION,WBINC16,REGION,CONC_PM25,COLOR_PM25,GEOM
+Thailand,Bangkok,2015,27.87037037,13.74622118,100.5544779,9269823,Upper middle income,South-East Asia (LMIC),25-<35,darkorange,"{""srid"":4326,""version"":1,""points"":[{""x"":100.554,""y"":13.7462,""z"":null,""m"":null}],""figures"":[{""attribute"":1,""pointOffset"":0}],""shapes"":[{""parentOffset"":-1,""figureOffset"":0,""type"":1}],""segments"":[]}"
