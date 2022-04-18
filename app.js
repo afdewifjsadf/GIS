@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.use(morgan('dev'));
 
 // Multer Upload Storage
+// อัพโหลดไฟล์
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, __dirname + '/uploads/')
@@ -34,6 +35,7 @@ app.get('/', (req, res) => {
     res.render('index')
 })
 
+// อัพ excel
 app.route("/uploadExcel").get((req, res) => {
     res.render('uploadExcel')
 }).post(upload.single("uploadfile"), async (req, res) => {
@@ -45,11 +47,13 @@ app.route("/uploadExcel").get((req, res) => {
         let insertSuccess = []
         let insertFail = []
 
+        // อ่าน excel
         const rows = await readXlsxFile(__dirname + '/uploads/' + req.file.filename)
 
         console.log(rows.length)
         rows.shift();
 
+        // func insert data to mssql
         const insertRow = row => {
             return new Promise((resolve, reject) => {
                 pool.request().input('input_COUNTRY', sql.NVarChar(255), row[0])
@@ -74,6 +78,7 @@ app.route("/uploadExcel").get((req, res) => {
                                         @input_CONC_PM25,
                                         @input_COLOR_PM25)`
                         , (err, result) => {
+                            // เก็บ log insert
                             if (err) {
                                 insertFail.push(row)
                             } else {
@@ -85,10 +90,12 @@ app.route("/uploadExcel").get((req, res) => {
             })
         }
 
+        // insert ค่า โดย loop excel
         for (let row of rows) {
             await insertRow(row)
         }
 
+        // create excel insertLog
         const workbook = new excelJS.Workbook();
         const worksheetInsertSuccess = workbook.addWorksheet(`insertSuccess`);
         worksheetInsertSuccess.columns = [
@@ -140,14 +147,12 @@ app.route("/uploadExcel").get((req, res) => {
         const data = await workbook.xlsx.writeFile(filePath)
         fs.exists(filePath, function (exists) {
             if (exists) {
-                console.log("repla")
                 res.download(filePath, fileName);
             }
         });
 
 
         // res.json({ "totalInsert": insertSuccess.length + insertFail.length, "RowsAffected": insertSuccess.length, "insertSuccess": insertSuccess, "insertFail": insertFail })
-
 
     } catch (error) {
         console.log(error)
@@ -158,7 +163,7 @@ app.route("/uploadExcel").get((req, res) => {
 
 
 
-
+// Perform the following queries and save the results in excel files:
 app.route('/query').get((req, res) => {
     res.render('queryPage');
 })
@@ -169,10 +174,13 @@ app.post('/query/:id', async (req, res) => {
     try {
         const id = req.params.id;
         if (id == 1) {
-
+            // a) List country and city names whose PM 2.5 values are greater than 50 in 2015.
             let pool = await sql.connect(config);
+
+            // query
             const result = await pool.request().query(`SELECT COUNTRY, CITY FROM [${process.env.DBTABLE}] WHERE PM25 > 50 AND YEAR = 2015;`)
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`PM 2.5 > 50 YEAR 2015`);
 
@@ -197,9 +205,13 @@ app.post('/query/:id', async (req, res) => {
             });
 
         } else if (id == 2) {
+            // b) Calculate the AVG(PM 2.5) by country (show the results in a decreasing order).
             let pool = await sql.connect(config);
+
+            // query
             const result = await pool.request().query(`SELECT COUNTRY, AVG(PM25) as 'AVG_PM25' FROM [${process.env.DBTABLE}] GROUP BY COUNTRY ORDER BY AVG_PM25 DESC;`);
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet("AVG(PM 2.5) by country");
             worksheet.columns = [
@@ -224,12 +236,17 @@ app.post('/query/:id', async (req, res) => {
             });
 
         } else if (id == 3) {
+            // c) Given a <country_input> from the user, show a historical PM 2.5 values by year.
+            // get country_input
             const country_input = req.body.country_input;
             let pool = await sql.connect(config);
+
+            // query
             const result = await pool.request()
                 .input('country_input', sql.NVarChar(255), country_input)
                 .query(`SELECT COUNTRY, CITY, YEAR, PM25 FROM [${process.env.DBTABLE}] WHERE COUNTRY = @country_input ORDER BY YEAR;`);
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`${country_input} historical PM 2.5`);
 
@@ -258,14 +275,19 @@ app.post('/query/:id', async (req, res) => {
                 }
             });
         } else if (id == 4) {
+            // c) Given a <country_input> from the user, show a historical PM 2.5 values by year.
+            // get color_pm25, get  year_input
             const color_pm25 = req.body.color_pm25
             const year_input = parseInt(req.body.year_input)
             let pool = await sql.connect(config);
+
+             // query
             const result = await pool.request()
                 .input('color_pm25', sql.NVarChar(255), color_pm25)
                 .input('year_input', sql.Int, year_input)
                 .query(`SELECT SUM(POPULATION) as 'TOTAL-OF-THE-AFFECTED-POPULATION' FROM [${process.env.DBTABLE}] WHERE YEAR = @year_input AND COLOR_PM25 = @color_pm25;`);
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`${color_pm25} ${year_input} total affected `);
 
@@ -298,7 +320,7 @@ app.post('/query/:id', async (req, res) => {
 })
 
 
-
+// 5) Perform the following queries and visualize the map results on the Web:
 app.get('/visualizeMap', (req, res) => {
     res.render('visualizeMap')
 })
@@ -309,15 +331,18 @@ app.post('/visualizeMap/:id', async (req, res) => {
     try {
         const id = req.params.id;
         if (id == 1) {
+            // a) Given a <year_input> from the user, visualize all the city points of all countries.
+            // get year_input
             const year_input = req.body.year_input
             let pool = await sql.connect(config);
+            // query
             const result = await pool.request()
                 .input('year_input', sql.Int, year_input)
                 .query(`SELECT * FROM [${process.env.DBTABLE}] WHERE YEAR = @year_input`)
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`${year_input} all city `);
-
             worksheet.columns = [
                 { header: "COUNTRY", key: "COUNTRY", width: 20 },
                 { header: "CITY", key: "CITY", width: 20 },
@@ -332,7 +357,6 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 { header: "COLOR_PM25", key: "COLOR_PM25", width: 20 },
                 { header: "GEOM", key: "GEOM", width: 20 },
             ];
-
             result.recordset.forEach(e => {
                 worksheet.addRow(e)
             })
@@ -345,6 +369,8 @@ app.post('/visualizeMap/:id', async (req, res) => {
             const filePathCsv = path.join(__dirname, `public/csv/${fileNameCsv}`)
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+
+             // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
@@ -353,8 +379,9 @@ app.post('/visualizeMap/:id', async (req, res) => {
             });
 
         } else if (id == 2) {
-
+            // b) Visualize the 50 closest city points to Bangkok.
             let pool = await sql.connect(config);
+            // query
             const result = await pool.request().query(
                 `DECLARE @BangkokPoint GEOMETRY;
                 SELECT @BangkokPoint = GEOM
@@ -382,7 +409,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 ORDER BY Distance ASC;`
             )
 
-
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`50 closest Bangkok`);
 
@@ -414,6 +441,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+            // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
@@ -422,12 +450,18 @@ app.post('/visualizeMap/:id', async (req, res) => {
             });
 
         } else if (id == 3) {
+
+            // c) Visualize all the city points of Thailand’s neighboring countries in 2018.
             let pool = await sql.connect(config);
+
+            //get year_input
             const year_input = req.body.year_input
+
+            // query
             const result = await pool.request()
                 .input('year', sql.Int, year_input)
                 .query(
-                `DECLARE @Thailand GEOMETRY;
+                    `DECLARE @Thailand GEOMETRY;
                 SELECT @Thailand = Geom
                 FROM world
                 WHERE name = 'Thailand';
@@ -439,6 +473,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
                                                 WHERE Geom.MakeValid().STTouches(@Thailand.MakeValid()) = 1)`
                 )
 
+            //create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`Thailand’s neighboring countries ${year_input}`);
 
@@ -470,6 +505,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+            // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
@@ -479,15 +515,18 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
         } else if (id == 4) {
 
-
+            // d) Visualize the four points of MBR covering all city points in Thailand in 2009.
             let pool = await sql.connect(config);
             const country = 'Thailand';
+            // get year_input
             const year_input = req.body.year_input
+
+            // query MBR
             const result_MBR = await pool.request()
                 .input('country', sql.NVarChar(255), country)
                 .input('year', sql.Int, year_input)
                 .query(
-                `DECLARE @TH geometry
+                    `DECLARE @TH geometry
                 SELECT @TH = geometry::UnionAggregate(GEOM)
                 FROM [${process.env.DBTABLE}]
                 WHERE COUNTRY = @country AND YEAR = @year;
@@ -495,8 +534,10 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 SELECT @TH.STEnvelope().ToString()  as envelope;
                 `)
 
+            // ตัดให้เหลือ 4 จุด
             const tem = result_MBR.recordset[0]['envelope'].replace("POLYGON ((", "").replace("))", "").split(", ")
 
+            // กำหนดให้แต่ละจุด
             const fourPointsoFMBR = {
                 'bottom-left': [parseFloat(tem[0].split(" ")[0]), parseFloat(tem[0].split(" ")[1])],
                 'bottom-right': [parseFloat(tem[1].split(" ")[0]), parseFloat(tem[1].split(" ")[1])],
@@ -504,10 +545,14 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 'top-left': [parseFloat(tem[3].split(" ")[0]), parseFloat(tem[3].split(" ")[1])],
             }
             console.log(fourPointsoFMBR)
+
+            // query all city points in Thailand in 2009.
             const result = await pool.request()
                 .input('country', sql.NVarChar(255), country)
                 .input('year', sql.Int, year_input)
                 .query(`SELECT * FROM [${process.env.DBTABLE}] WHERE COUNTRY =  @country AND YEAR = @year;`)
+
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`highest no of city in ${year_input}`);
             worksheet.columns = [
@@ -538,14 +583,18 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+
+            // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
 
             res.render("map_2", { "mapCsv": fileNameCsv, fourPointsoFMBR, "whatQuery": `Visualize the four points of MBR covering all city points in Thailand in ${year_input}.` })
 
 
         } else if (id == 5) {
-
+            // e) Visualize all city points of countries having the highest no. of city points in 2011.
             let pool = await sql.connect(config);
+
+            // query
             const result = await pool.request().query(
                 `select *
                 from dbo.AirPollutionPM25
@@ -556,7 +605,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
                     GROUP BY COUNTRY
                     order by count(city) desc);`
             )
-
+            // create exp
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`highest no of city in 2011`);
             worksheet.columns = [
@@ -587,6 +636,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+            // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
@@ -597,12 +647,17 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
 
         } else if (id == 6) {
+            // f) Given a <year_input> from the user, visualize all the city points which are considered as “low income” (as specified in column wbinc16_text).
+            // get year_input
             const year_input = req.body.year_input
             let pool = await sql.connect(config);
+
+            // query
             const result = await pool.request()
                 .input('year_input', sql.Int, year_input)
                 .query(`SELECT * FROM [${process.env.DBTABLE}] WHERE YEAR=@year_input AND WBINC16 = 'low income'`)
 
+            // create excel
             const workbook = new excelJS.Workbook();
             const worksheet = workbook.addWorksheet(`${year_input} all city `);
 
@@ -634,6 +689,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
             const data = await workbook.xlsx.writeFile(filePathXlsx)
             const workBookXlsx = XLSX.readFile(filePathXlsx);
+            // create csv
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
@@ -650,7 +706,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
 
 })
 
-
+// start server on port
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
     console.log(`App listening on port ${PORT}`);
