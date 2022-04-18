@@ -682,8 +682,8 @@ app.post('/visualizeMap/:id', async (req, res) => {
                 cell.font = { bold: true };
             });
 
-            const fileNameXlsx = `Given-a-year_input-from-the-user,-visualize-all-the-city-points-of-all-countries.xlsx`
-            const fileNameCsv = `Given-a-year_input-from-the-user,-visualize-all-the-city-points-of-all-countries.csv`
+            const fileNameXlsx = `Given-a-year_input-from-the-user,-visualize-all-the-city-points-which-are-considered-as-“low-income”-(as-specified-in-column-wbinc16_text).xlsx`
+            const fileNameCsv = `Given-a-year_input-from-the-user,-visualize-all-the-city-points-which-are-considered-as-“low-income”-(as-specified-in-column-wbinc16_text).csv`
             const filePathXlsx = path.join(__dirname, `public/excel/visualize/${fileNameXlsx}`)
             const filePathCsv = path.join(__dirname, `public/csv/${fileNameCsv}`)
 
@@ -693,7 +693,7 @@ app.post('/visualizeMap/:id', async (req, res) => {
             await XLSX.writeFile(workBookXlsx, filePathCsv, { bookType: "csv" });
             fs.exists(filePathCsv, function (exists) {
                 if (exists) {
-                    res.status(200).render("map", { "mapCsv": fileNameCsv, "whatQuery": `Given a ${year_input} from the user, visualize all the city points which are` })
+                    res.status(200).render("map", { "mapCsv": fileNameCsv, "whatQuery": `Given a ${year_input} from the user, visualize all the city points which are considered as “low income” (as specified in column wbinc16_text)` })
                 }
             });
 

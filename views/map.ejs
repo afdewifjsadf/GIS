@@ -37,14 +37,7 @@
         "esri/layers/FeatureLayer",
         "esri/layers/CSVLayer",
         "esri/widgets/Legend",
-      ], function (
-        esriConfig,
-        Map,
-        MapView,
-        FeatureLayer,
-        CSVLayer,
-        Legend
-      ) {
+      ], function (esriConfig, Map, MapView, FeatureLayer, CSVLayer, Legend) {
         esriConfig.apiKey =
           "AAPKe266bf661a24423f96d6486821a90e1eXEx2Qx5PCP6tOsy9lLliSvE1SyAFdXzgmrqOWPMei2qtfmMQMLrjazswJ4ozViKU";
 
@@ -144,7 +137,6 @@
 
         // ดึง csv แสดงผล
         const csvLayer = new CSVLayer({
-
           url: "/csv/" + "<%= mapCsv %>",
           renderer: renderer,
           popupTemplate: {
